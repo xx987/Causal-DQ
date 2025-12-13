@@ -8,6 +8,7 @@ This repository provides the implementation associated with the paper:
 1. Run `CausalDQ_xx_train.py` to start training the network for the corresponding simulation case.  
 2. Run `Test_CausalDQ_xx.py` to reproduce the corresponding simulation results.
 3. We use the real datasets, Tennessee Eastman Process (TEP) [1] and Solar Flare Detection (SFD) [2],  in the real cases.
+4. All of our training and testing data are available at: https://drive.google.com/drive/folders/1x557hbKYmgxjDa9bawBdOYK_k0EpIwDG?usp=drive_link
 ## Reminder
 
 If you wish to experiment with different values of `p` (number of variables) or different levels of mean shift,  
