@@ -14,7 +14,7 @@ class QNetwork(nn.Module):
         self.fc2 = nn.Linear(hidden, hidden)
         self.fc3 = nn.Linear(hidden, hidden)
         self.advantage = nn.Linear(hidden, output_dim)
-        # 价值分支（输出状态价值）
+        
         self.value = nn.Linear(hidden, 1)
 
         self.out = nn.Linear(hidden, output_dim)
@@ -63,11 +63,11 @@ class CausalEnv:
         self.M = M
         self.m = m
         self.t = 0
-        self.T = 31          # 漂移开始时间
+        self.T = 31          
         self.lam = 10
         self.p = 30
         self.ranking = np.random.permutation(self.M)
-        # 初始化 StateGenerator（此处 lam 可单独设置，与环境 lam 不必一致）
+        
         self.state_gen = SG(M, lam=0.08)
         #self.reset()
 
@@ -76,16 +76,16 @@ class CausalEnv:
 
     def step(self,state, action_idxs, X , input_vector ,sigma2):#Input vector is the causal state here!
         self.t += 1
-        #print(self.t,'self.t是多少')
+        
         done = self.t >= 200
         self.w_s = np.clip(np.random.randn(3 * self.M), 0, 1)
         self.w_a = np.clip(np.random.randn(self.M,), 0, 1)
 
-        # 计算 causal mask，用于奖励计算
+        
         s_mask = np.zeros(self.M)
         s_mask[self.ranking.argsort()[:self.m]] = 1  # causal mask: M^{s→r}
         a_mask = np.zeros(self.M)
-        #print(a_mask,'看看action idxs 是多少')
+        
         a_mask[list(action_idxs)] = 1               # causal mask: M^{a→r}
 
         state_flat = state.flatten()
@@ -111,14 +111,11 @@ class CausalEnv:
             reward = 1
             #print(reward, 'reward333333333333333')
 
-        # 构造上一轮动作的二值表示
+        
         prev_action = np.zeros(self.M)
         prev_action[list(action_idxs)] = 1
 
-        # 利用 StateGenerator 生成下一轮 state
-        #E, Sigma, X = self.get_data()
-        # 这里的 current_stat 可根据实际业务选择，这里用随机数模拟
-        #current_stat = np.random.rand(self.M) * 2
+
         next_state = self.state_gen.update(X,input_vector,sigma2,action_idxs)[0]
         #print(reward, self.t,self.T,"RewardRewardRewardRewardReward CTCCCCCCCCCCC")
         return next_state, reward, done
@@ -130,8 +127,8 @@ class DoubleDQNAgent:
     def __init__(self, state_dim, action_list, alpha=0.1, gamma=0.99, lr=1e-3,tau_start=5,tau_end=0.01,tau_decay=0.995):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.action_list = action_list
-        #self.tau = tau      # Boltzmann 温度
-        self.alpha = alpha  # 熵系数
+        #self.tau = tau      # Boltzmann 
+        self.alpha = alpha  
         self.gamma = gamma
 
         self.q_net = QNetwork(input_dim=state_dim, output_dim=len(action_list)).to(self.device)
@@ -141,13 +138,13 @@ class DoubleDQNAgent:
         self.optimizer = torch.optim.Adam(self.q_net.parameters(), lr=lr)
         self.replay = ReplayBuffer()
         self.tau_start = tau_start
-        self.tau = tau_start      # 当前温度初始化为起始值
+        self.tau = tau_start      
         self.tau_end = tau_end
         self.tau_decay = tau_decay
         self.action_i = None
 
     def decay_tau(self):
-        """指数衰减温度参数"""
+        
         self.tau = max(self.tau_end, self.tau * self.tau_decay)
         return self.tau
 
@@ -167,10 +164,10 @@ class DoubleDQNAgent:
         with torch.no_grad():
             q_values = self.q_net(state).squeeze()
         #print(q_values,"q_valuesq_valuesq_valuesq_values")
-        # 数值稳定版的Softmax计算
-        #print(self.tau,"self.tau是多少self.tau是多少self.tau是多少self.tau是多少self.tau是多少")
+        
+        
         scaled_q = q_values / self.decay_tau()#self.tau
-        scaled_q -= scaled_q.max()  # 防止数值溢出
+        scaled_q -= scaled_q.max()  
         probs = torch.softmax(scaled_q, dim=0)
         #print(probs,"probsprobsprobsprobs")
         #action_idx = torch.multinomial(probs, num_samples=1).item()
@@ -193,14 +190,14 @@ class DoubleDQNAgent:
         # return entropy
 
         a_mask = torch.zeros_like(q_values)  # shape: (batch_size, num_actions)
-        a_mask[:, self.action_i] = 1  # 只允许 action_i 中的动作为 1，其它为 0
+        a_mask[:, self.action_i] = 1  
 
-        # 计算 masked softmax（即 C(a, s) * pi(a|s)）再归一化
+        
         masked_logits = q_values / self.decay_tau()
-        masked_logits[a_mask == 0] = 0#-1e10  # 给无效动作一个极小值，避免影响 softmax
+        masked_logits[a_mask == 0] = 0#-1e10  
         probs = torch.softmax(masked_logits, dim=1)
 
-        # 计算熵
+        
         log_probs = torch.log(probs + 1e-10)
         entropy = -torch.sum(probs * log_probs, dim=1)
         return entropy
