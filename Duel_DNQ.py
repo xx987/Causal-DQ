@@ -98,26 +98,20 @@ class CausalEnv:
 
 
         if self.t < self.T + self.lam:
-            reward = -1.0 #if any(elem in action_idxs for elem in (0, 1, 2, 3)) else -100
+            reward = -1.0 
         elif self.T + self.lam <= self.t <= self.T + self.p:
-            #reward = max(C_t, np.exp((self.p - (self.t - self.T)) / 200000)) if any(elem in action_idxs for elem in (0, 1, 2, 3)) else -10
-            #print(reward, 'reward22222222222222')
-            #count = sum(1 for x in action_idxs if x in (0, 1, 2, 3))
+
+            
             count = sum(1 for x in action_idxs if x in (0,1,2,3,4))#,6,7,8,9,10,11,12,13,14,15,16,17,18,19))
             reward = count if count > 0 else -50
-            #reward = 3 if any(elem in action_idxs for elem in (0, 1, 2, 3)) else -10
-            # print(reward, 'reward22222222222222')
+
         else:
             reward = 1
-            #print(reward, 'reward333333333333333')
-
-        
         prev_action = np.zeros(self.M)
         prev_action[list(action_idxs)] = 1
 
 
         next_state = self.state_gen.update(X,input_vector,sigma2,action_idxs)[0]
-        #print(reward, self.t,self.T,"RewardRewardRewardRewardReward CTCCCCCCCCCCC")
         return next_state, reward, done
 
 # ---------------------------
